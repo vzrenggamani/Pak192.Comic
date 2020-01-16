@@ -1,0 +1,62 @@
+name: Nightly Build Automator
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout  # Checkout repository latest commit
+        uses: actions/checkout@v2.0.0
+        
+      - name: Install simutrans build tools
+        shell: bash
+        run : apt-get update && apt-get install -y autoconf build-essential curl libbz2-dev libpng-dev libz-dev subversion unzip sed wget
+      
+      - name: Fetch simutrans latest revision
+        run: svn checkout svn://servers.simutrans.org/simutrans simutrans
+        
+      - name: configure simutrans build env
+        run: |
+          cd simutrans/trunk
+          autoconf
+          ./configure
+          
+      - name: Build makeobj
+        run: |
+          cd ./simutrans/trunk/makeobj/
+          make
+          
+      - name: Build pak192.comic nightly
+        shell: bash
+        run: |
+          cp ./simutrans/trunk/makeobj/ .
+          bash COMPILE.sh
+          
+      - name: Archive compiled pakset
+        run: zip -r pak192-nightly.zip compiled
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: yes
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./pak192-nightly.zip
+          asset_name: pak192-nightly.zip
+          asset_content_type: application/zip
+          
+      
