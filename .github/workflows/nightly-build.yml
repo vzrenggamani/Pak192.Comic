@@ -28,12 +28,11 @@ jobs:
         run: |
           cd ./simutrans/trunk/makeobj/
           make
+          cp ./makeobj ../../../
           
       - name: Build pak192.comic nightly
         shell: bash
-        run: |
-          cp ./simutrans/trunk/makeobj/ .
-          bash COMPILE.sh
+        run: bash COMPILE.sh
           
       - name: Archive compiled pakset
         run: zip -r pak192-nightly.zip compiled
